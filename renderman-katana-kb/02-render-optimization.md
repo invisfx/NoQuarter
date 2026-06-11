@@ -1,6 +1,6 @@
-# 02 — Render Optimization at Animation Scale (RenderMan 27.x)
+# 02 — Render Optimization at Animation Scale (anchored on RenderMan **26.x**)
 
-> Companion to [01-renderman-core-and-xpu](01-renderman-core-and-xpu.md). Parameter names are stable across RenderMan 20–27; confirm exact 27.x defaults in your install. Pixar wikis 403 automated fetches — some specifics are from indexed excerpts.
+> Companion to [01-renderman-core-and-xpu](01-renderman-core-and-xpu.md). **Anchored on RenderMan 26.x** (your Katana 6.5v4 pairing). Parameter names are stable across RenderMan 20–26; confirm exact 26.x defaults in your install. Items that are 27-only are labeled as such. Remember the core 26.x rule: **finals render in RIS; XPU is interactive-only** — so all farm/checkpoint/deep/holdout optimization below is **RIS** on your pipeline.
 
 ---
 
@@ -31,8 +31,9 @@
 
 ## 4. Texture pipeline
 
-- **`txmake`** converts source images to RenderMan **`.tex`**: tiled + **mipmapped** pyramids (each level halved in S and T), improving antialiasing and letting the renderer load only the appropriate mip level per shading grid. A mipmapped `.tex` is ~⅓ larger than the source. ([txmake(1)](https://renderman.pixar.com/resources/RenderMan_20/txmake.1.html))
-- **RenderMan 27** added **OpenImageIO-based** faster conversion and **native mipmapped-EXR support** — render directly from mipmapped EXR and **skip the `.tex` step**. **27.2** raised textures from **8 to 64 channels** each. ([CG Channel 27](https://www.cgchannel.com/2025/11/pixar-releases-renderman-27/); [CG Channel 27.2](https://www.cgchannel.com/2026/02/pixar-releases-renderman-27-2/))
+- **`txmake`** converts source images to RenderMan **`.tex`**: tiled + **mipmapped** pyramids (each level halved in S and T), improving antialiasing and letting the renderer load only the appropriate mip level per shading grid. A mipmapped `.tex` is ~⅓ larger than the source. **On 26.x this `.tex` conversion is your standard texture-prep step** (the native mipmapped-EXR "skip conversion" path is a 27 feature). ([txmake(1)](https://renderman.pixar.com/resources/RenderMan_20/txmake.1.html))
+- **Channel cap:** 26.x textures carry up to **8 channels** each (the 8→64 raise is 27.2) — pack utility/AOV textures accordingly.
+- *(27-only, not on your pipeline: OpenImageIO-based faster conversion + native mipmapped-EXR support that lets you skip `.tex`; 64-channel textures.)*
 - **RtxPlugin / RtxTexture (on-demand texturing):** the **RtxPlugin** C++ API responds to texture requests by filling cache tiles on demand at the resolution appropriate to the shading grid; the renderer reuses cached tiles and applies its own filtering/AA — the basis of out-of-core texturing for huge budgets. ([RtxPlugin](https://renderman.pixar.com/resources/RenderMan_20/rtxPlugin.html))
 - **Texture-cache budget:** the renderer keeps a bounded in-RAM texture cache and pages tiles; budget so the working set fits without thrashing. *(Exact 27 option name for the cache-size budget not confirmed here — verify in your build's options reference.)*
 
@@ -50,22 +51,24 @@
 - Enable via the checkpoint **Option** or **`-checkpoint`** on `prman` (time- or pass-interval based). Checkpoints embed extra recovery state, so they're slightly larger than normal images. ([Checkpointing & Recovery](https://renderman.pixar.com/resources/RenderMan_20/risRecovery.html))
 - Resume an interrupted render with **`-recover 1`**: PRMan inspects existing images and continues near where it stopped; if images are finished/missing/mismatched it silently restarts.
 - **Incremental rendering** (`hider:incremental`) refines the whole image over repeated passes; **checkpointing of incremental renders requires OpenEXR** + the checkpoint option.
-- **27 milestone:** **XPU now supports checkpointing** (essential for farm management); **27.1** fixed XPU's post-checkpoint command to run after a successful render like RIS. ([CG Channel 27](https://www.cgchannel.com/2025/11/pixar-releases-renderman-27/); [DP 27.1](https://digitalproduction.com/2025/12/09/checkpoint-fixed-pixar-ships-renderman-27-1/))
+- **On 26.x, checkpointing is a RIS feature.** Since your finals run in RIS anyway, this is exactly where you want it — combine **checkpoint + `-recover`** on every farm render. *(XPU checkpointing is 27-only.)*
 
 ---
 
 ## 7. Deep vs flat; threading, RAM, farm strategy
 
-- **Deep EXR** stores multiple depth samples per pixel for correct depth-composited holdouts and volume merging; substantially heavier than flat output in **file size and write/merge cost** — reserve deep for elements that need depth compositing (volumes, holdout-heavy layered comps), not every pass. ([DeepEXR](https://rmanwiki-26.pixar.com/space/REN26/19661873/DeepEXR); [Holdouts](https://rmanwiki-26.pixar.com/space/REN26/19661827)) *(Specific flat-vs-deep cost multipliers not found in an official source — qualitative.)*
-- **27 deep workflow:** full support for **OpenEXR Deep IDs** and auto-generated **OpenEXR 3.0-style ID manifests** for deep compositing; XPU supports deep output. ([CG Channel 27](https://www.cgchannel.com/2025/11/pixar-releases-renderman-27/))
-- **Threading/RAM/farm:** RIS scales across CPU cores; budget RAM for the texture cache (§4) plus diced geometry/displacement working set. On the farm, combine **checkpointing + `-recover`** for resilient long renders and to free preemptible nodes. For **XPU farms, schedule by GPU/VRAM** as the binding constraint (§8).
+- **Deep EXR** stores multiple depth samples per pixel for correct depth-composited holdouts and volume merging; substantially heavier than flat output in **file size and write/merge cost** — reserve deep for elements that need depth compositing (volumes, holdout-heavy layered comps), not every pass. **On 26.x, deep output is a RIS feature** (XPU deep is "Coming soon" in 26 / lands in 27) — another reason finals go through RIS. ([DeepEXR, REN26](https://rmanwiki-26.pixar.com/space/REN26/19661873); [Holdouts, REN26](https://rmanwiki-26.pixar.com/space/REN26/19661827)) *(Flat-vs-deep cost multipliers qualitative.)*
+- **Threading/RAM/farm:** RIS scales across CPU cores; budget RAM for the texture cache (§4) plus diced geometry/displacement working set. On the farm, combine **checkpointing + `-recover`** (RIS) for resilient long renders and to free preemptible nodes.
 
 ---
 
-## 8. XPU GPU memory at scale
+## 8. XPU GPU memory (26.x — interactive use)
 
-- **No out-of-core:** scene must fit in VRAM; **multi-GPU does NOT pool memory** — it must fit in **each** GPU. Plan VRAM budget per node; **12 GB min, 24 GB+ recommended**. CPU(-only) XPU is the over-budget fallback (matching pixels). ([general-faq](https://renderman.pixar.com/general-faq))
-- Lever VRAM down with: tighter texture working set (mip/RtxPlugin), instancing, render-time procedurals, and trace subsets to limit secondary-ray geometry.
+Since XPU on 26.x is for **interactive lookdev/IPR**, GPU memory is about keeping your viewer sessions responsive, not farm finals:
+- **Single-GPU** in 26 (multi-GPU is 27). NVIDIA **Pascal+**; VRAM **11 GB min, 24 GB suggested**. **No out-of-core** — the interactive scene must fit in VRAM. ([XPU Tech Specs, REN26](https://renderman.atlassian.net/wiki/spaces/REN26/pages/19661989))
+- XPU samples textures **one MIP coarser than RIS** to fit more in VRAM (previews slightly softer than the RIS final).
+- Lever VRAM down with: tighter texture working set (mip/RtxPlugin), instancing, render-time procedurals, trace subsets.
+- For over-budget or final scenes, **use RIS** (your final-frame engine anyway).
 
 ---
 
@@ -75,8 +78,8 @@
 2. **Denoise** (ML/OptiX) to cut samples; emit `Ci`+`albedo`(+var)+`normal`(+var)+motion vectors; `_variance.exr`, `raw` channel type.
 3. **Trace depth** minimal; per-object overrides in RIS; `maxIndirectBounces` in XPU.
 4. **Caustics?** → RIS + PxrVCM.
-5. **Textures** mipmapped (`.tex` or native mip-EXR in 27); RtxPlugin for huge sets; budget the cache.
+5. **Textures** mipmapped via `.tex` (txmake); 8-channel cap; RtxPlugin for huge sets; budget the cache.
 6. **Trace subsets** to drop irrelevant geometry from secondary rays.
-7. **Checkpoint + `-recover`** on every farm render; OpenEXR for incremental.
-8. **Deep** only where depth comp needs it.
-9. **XPU**: confirm scene fits per-GPU VRAM; else CPU-only fallback.
+7. **Checkpoint + `-recover`** (RIS) on every farm render; OpenEXR for incremental.
+8. **Deep** (RIS) only where depth comp needs it.
+9. **Finals → RIS**; XPU for interactive lookdev (single-GPU, fits VRAM).

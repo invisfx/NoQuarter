@@ -1,6 +1,6 @@
-# 03 — RenderMan Shading (RenderMan 26/27)
+# 03 — RenderMan Shading (anchored on RenderMan **26.x**)
 
-> Merges three research passes (PxrSurface/materials/lighting, MaterialX Lama, OSL/patterns). Pixar wikis 403 automated fetches; node names and roles are corroborated across multiple official URLs, but **exact parameter spellings/defaults should be verified against your installed `.args` files** before scripting them. `REN26` = RenderMan 26 doc space; `REN`/`REN27` = current 27.x.
+> Merges three research passes (PxrSurface/materials, MaterialX Lama, OSL/patterns). **Anchored on RenderMan 26.x** (your Katana 6.5v4 pairing). The shading model — PxrSurface, Lama, OSL patterns, the material types — is the same on 26 as on 27; the one thing that differs for you is **where Lama runs: RIS only on 26.x** (XPU Lama is a 27 feature). Pixar wikis 403 automated fetches; node names/roles are corroborated across official URLs, but **verify exact parameter spellings/defaults against your installed `.args` files**. `REN26` = RenderMan 26 doc space.
 
 ---
 
@@ -32,7 +32,7 @@ A single Bxdf composed of a fixed, ordered stack of physically based lobes, each
 **What it is.** Component-based **material layering** developed at **ILM**, contributed to the open **MaterialX** standard, integrated into RenderMan (shipped in RenderMan 24, 2021). Instead of an uber-shader you build a graph of small physically-based BxDF nodes combined by dedicated layering/combiner nodes — energy-conserving and physically plausible by construction. ([MaterialX Lama, REN26](https://rmanwiki-26.pixar.com/space/REN26/19661457); [Fundamentals: Materials](https://renderman.pixar.com/fundamentals-materials))
 
 ### Structural nodes
-- **`LamaSurface`** — terminal/root node assigned to geometry; carries shared surface controls (`presence`, displacement, `inputAOV`). Confirmed params include `presence` (default `1.0`, antialiasable cutout) and `presenceCached` (ignored by XPU). Fully XPU-supported. ([LamaSurface, REN26](https://rmanwiki-26.pixar.com/space/REN26/19662379))
+- **`LamaSurface`** — terminal/root node assigned to geometry; carries shared surface controls (`presence`, displacement, `inputAOV`). Confirmed params include `presence` (default `1.0`, antialiasable cutout) and `presenceCached`. **On 26.x, render Lama through RIS.** ([LamaSurface, REN26](https://rmanwiki-26.pixar.com/space/REN26/19662379))
 - **`LamaLayer`** — the core combiner. Takes a **top** (`material`) and a **base** (`layer`) plus a **weight**; combines them in a Fresnel-driven, energy-conserving way (base attenuated by the top's transmission). ([LamaLayer, REN26](https://rmanwiki-26.pixar.com/space/REN26/19661467))
 - **`LamaAdd`** — adds two materials, each with its own weight. If weights sum > 1.0 you can reflect more light than received (breaks energy conservation, harms convergence). ([LamaAdd](https://rmanwiki.pixar.com/display/REN24/LamaAdd))
 - **`LamaMix`** — blends two materials like a compositing "over": `mix` 0 → material1, 1 → material2; can be texture-driven (grey values cost more). ([LamaMix](https://rmanwiki.pixar.com/display/REN25/LamaMix))
@@ -62,12 +62,10 @@ Sources: ([MaterialX Lama, REN26](https://rmanwiki-26.pixar.com/space/REN26/1966
 
 ### Version timeline
 - **24 (2021):** Lama introduced (RIS).
-- **26.x:** full node library documented (RIS).
-- **27.0 (Nov 2025):** Lama integrated into **XPU as Early Access**; LamaDielectric/Conductor/GeneralizedSchlick support anisotropy/single-scatter/extinction "matching or exceeding RIS accuracy."
-- **27.1 (Dec 2025):** XPU adds **Lama coating absorption** (base nodes change absorption as a LamaLayer top).
-- Still not XPU-supported: **LamaTriColorSSS**.
+- **26.x (you):** full node library available, **RIS only**. XPU does **not** evaluate MaterialX/Lama in 26.
+- *(27.0 added Lama to XPU as Early Access; 27.1 added XPU Lama coating absorption — both require Katana 7+, not your pipeline.)*
 
-> **On your RenderMan version:** if you're on 26.x, Lama runs in **RIS** (coating absorption in XPU is a 27.1 feature). Check [XPU Features & Limitations, REN27](https://renderman.atlassian.net/wiki/spaces/REN27/pages/542236818) before committing a Lama-heavy show to XPU final frames.
+> **For your 26.x pipeline:** author and render all Lama materials through **RIS**. Don't expect XPU IPR to evaluate Lama correctly in 26 — for fast interactive feedback on Lama-shaded assets you're effectively relying on RIS IPR (or PxrSurface look-equivalents for viewport speed). Since your finals are RIS anyway (see [01](01-renderman-core-and-xpu.md) §2), Lama-in-RIS is fully production-ready for you.
 
 ---
 
@@ -137,15 +135,16 @@ MaterialX is an open standard (governed under the **ASWF**, originally Lucasfilm
 
 ## 7. Stylized Looks / NPR
 
-The **Stylized Looks** suite (PxrStylized*) provides non-photoreal output via a network of control nodes + display/sample filters. In **RenderMan 27** it "matured from experiment to production toolset" as a unified subsystem under XPU; **27.2** added more nodes. ([Stylization at Pixar](https://renderman.pixar.com/stories/stylization-at-pixar); [DP 27.0](https://digitalproduction.com/2025/11/14/pixars-renderman-27-0/); [CG Channel 27.2](https://www.cgchannel.com/2026/02/pixar-releases-renderman-27-2/))
+The **Stylized Looks** suite (PxrStylized*) provides non-photoreal output via a network of control nodes + display/sample filters. **On 26.x you have the pre-27.2 toolset** — solid for cel/toon/line looks, but without the big 27.2 node expansion. ([Stylization at Pixar](https://renderman.pixar.com/stories/stylization-at-pixar); [Pixar RM26 news](https://renderman.pixar.com/news/pixar-animation-studios-releases-renderman-26))
 
-- **`PxrStylizedControl`** — hub driving the network (often paired with `PxrManifold2D` for brush/hatch placement).
-- **`PxrStylizedToon`** — toon stepping/range/softness; produces a toon AOV signal.
-- **`PxrStylizedHatching` / `PxrStylizedHatchControl`** — hatching brush strokes; up to **8 hatching layers**, screen-space/triplanar, per-layer color.
-- **`PxrStylizedLightControl`** — artistic lighting effects evaluated **before** standard RenderMan lights.
-- Plus **PainterlyBrush**, **Lines** (curvature/Sobel outlines), **Canvas**.
+**What 26.x gives you:**
+- **`PxrStylizedControl`** — hub driving the network (often paired with `PxrManifold2D` for placement).
+- **`PxrStylizedToon`** — toon stepping/range/softness; produces a toon AOV signal. 26.0 added an **artistic (non-PBR) toon mode**.
+- **Lines** (line detection/remapping/filtering — improved in 26.0) and a new **Canvas layer** (26.0); expanded compositing/detection modes.
 
-Workflow: a `PxrStylizedControl`-driven network produces stylization signals/AOVs; a chain of stylized display filters (toon, hatching, lines, canvas) composites the NPR look — cel, shaded-toon, sketch, marker, "Sin City" styles.
+Workflow: a `PxrStylizedControl`-driven network produces stylization signals/AOVs; a chain of stylized display filters composites the NPR look.
+
+> *(27.2-only, not on your pipeline: `PxrStylizedHatchControl` with up to 8 hatching layers, `PxrStylizedLightControl`, curvature/Sobel-edge outlines, PainterlyBrush. These need Katana 7+ / RenderMan 27.)*
 
 ---
 

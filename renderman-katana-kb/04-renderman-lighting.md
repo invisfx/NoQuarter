@@ -1,6 +1,6 @@
-# 04 — RenderMan Lighting (RenderMan 26/27)
+# 04 — RenderMan Lighting (anchored on RenderMan **26.x**)
 
-> All RenderMan lights are in the **Pxr** set and share a physically-based core: intensity, exposure (power-of-2), color/temperature, per-light sampling. Hubs: [Lighting, REN26](https://renderman.atlassian.net/wiki/spaces/REN26/pages/19661727); [Lighting, REN/27](https://rmanwiki.pixar.com/display/REN/Lighting). Pixar wikis 403 automated fetches — verify exact param spellings against each light's `.args`.
+> The light set is identical on 26 and 27 — everything here is valid for your **RenderMan 26.x + Katana 6.5v4** pipeline. (26.0 specifically improved area/IES lights, light temperature, and light selection in **XPU** for interactive lighting.) All RenderMan lights are in the **Pxr** set and share a physically-based core: intensity, exposure (power-of-2), color/temperature, per-light sampling. Hub: [Lighting, REN26](https://renderman.atlassian.net/wiki/spaces/REN26/pages/19661727). Pixar wikis 403 automated fetches — verify exact param spellings against each light's `.args`.
 
 ---
 
