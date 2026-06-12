@@ -62,6 +62,12 @@ Compiled June 2026 from official Pixar (`rmanwiki.pixar.com` / `renderman.pixar.
 | 13 | [`13-lead-templates-team-process.md`](13-lead-templates-team-process.md) | What you set up as lead: the shot template, master rigs & sequence propagation, naming/AOV/version conventions, color pipeline, farm policy, review/dailies, onboarding. Lead setup checklist. |
 | 14 | [`14-custom-tools-to-build.md`](14-custom-tools-to-build.md) | Tools to build for the team (PyQt5/Python/OpScript on 6.5): shot/template builder, AOV setup tool, light-group/naming checker, custom GafferThree rig packages, scene validator, relight slap-comp exporter. Tooling checklist. |
 
+### Deep-dive recipes & troubleshooting
+
+| # | File | What's inside |
+|---|---|---|
+| 15 | [`15-primvar-aovs-katana.md`](15-primvar-aovs-katana.md) | Getting Houdini FX-cache primvars (velocity, Cd, id, age, world position) out as AOVs in RfK. Why `dPdtime` fails on velocity-blur particles; promoting `geometry.point.v` → `geometry.arbitrary.v` (the **`vector3` vs `vector` inputType** trap); single-AOV via `userColor`/U4 (incl. the **mandatory U4 lobe registration** + `CU4L`/`noclamp` LPE); multi-AOV via `PxrTee` (+ the keep-alive gotcha); units (`1/FPS`) & coordinate-space (`color` vs `vector`); a bisection-test troubleshooting table. |
+
 ---
 
 ## Cross-cutting cheat-sheet
