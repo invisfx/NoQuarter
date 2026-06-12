@@ -53,6 +53,15 @@ Compiled June 2026 from official Pixar (`rmanwiki.pixar.com` / `renderman.pixar.
 | 09 | [`09-usd-solaris-pipeline.md`](09-usd-solaris-pipeline.md) | Katana's USD support (KatanaUsdPlugins/usdKatana/UsdIn); read/write/layer USD; USD vs Katana scene graphs; Solaris/LOPs vs Katana; MaterialX as interchange; Hydra render delegates incl. hdPrman. |
 | 10 | [`10-lookdev-color-workflow.md`](10-lookdev-color-workflow.md) | Lookdev rigs & calibration (grey/chrome ball, Macbeth); color management (ACES / OCIO v2 in RenderMan, Katana, Nuke); multi-shot/template lighting; relighting via light groups; slap comp; Nuke comp (multichannel/cryptomatte/deep). |
 
+### Artist workflow guides (process & tools — start here for day-to-day)
+
+| # | File | What's inside |
+|---|---|---|
+| 11 | [`11-shot-lighting-workflow.md`](11-shot-lighting-workflow.md) | The shot-lighting artist's click-path: ingest → render settings → block lights (GafferThree) → XPU IPR loop → AOV/output setup → RIS final on farm → slap comp/dailies → comp hand-off. Per-shot checklist. |
+| 12 | [`12-lookdev-workflow.md`](12-lookdev-workflow.md) | The lookdev artist's process: turntable rig, material build (NetworkMaterialCreate, Lama/PxrSurface, Material Solo), calibration, IPR iteration, multi-environment QC, LookFile publish, sign-off. Per-asset checklist. |
+| 13 | [`13-lead-templates-team-process.md`](13-lead-templates-team-process.md) | What you set up as lead: the shot template, master rigs & sequence propagation, naming/AOV/version conventions, color pipeline, farm policy, review/dailies, onboarding. Lead setup checklist. |
+| 14 | [`14-custom-tools-to-build.md`](14-custom-tools-to-build.md) | Tools to build for the team (PyQt5/Python/OpScript on 6.5): shot/template builder, AOV setup tool, light-group/naming checker, custom GafferThree rig packages, scene validator, relight slap-comp exporter. Tooling checklist. |
+
 ---
 
 ## Cross-cutting cheat-sheet
