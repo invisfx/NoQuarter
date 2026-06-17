@@ -26,7 +26,7 @@ I proved this to myself by accident earlier: the exact same AOV setup, copied fr
 **So two takeaways:**
 
 1. On a **locked camera**, `dPcameradtime` *is* `dPdtime`. Just use it. A camera-relative vector is what 2D VectorBlur wants anyway.
-2. For changing-topology FX — particles, RBD, volumes — deformation blur is impossible (point counts change frame to frame), so `dPdtime` *structurally cannot* populate. Stop chasing it. **`dP/dt` is just velocity, and you already cached `v`.** Output that.
+2. For changing-topology FX — particles, RBD, volumes — deformation blur is impossible (point counts change frame to frame), so `dPdtime` won't populate *from velocity blur*. The easy path: stop chasing it — **`dP/dt` is just velocity, and you already cached `v`** — output that. But if a pipeline *demands* the `dPdtime` channel itself, you **can** force it by synthesizing the motion samples by hand. See the [coda](#coda-actually-forcing-dpdtime-to-populate) — that's how this story actually ended.
 
 That decision — output the `v` primvar directly — is where the real adventure began.
 
@@ -172,6 +172,58 @@ And one perceptual trap worth its own line: **probe the numbers, don't trust the
 
 ---
 
+## Coda: actually forcing `dPdtime` to populate
+
+Here's the twist: I said `dPdtime` "structurally can't" work on velocity-blurred particles. That's true *as stated* — but only because the geometry has no motion samples. So **give it some.** You already have everything you need: position `P` and velocity `v`. Synthesize the sub-frame positions yourself.
+
+The idea: `P(t) = P + v·t`. Author `geometry.point.P` as a **two-sample** attribute — one at shutter open, one at shutter close — each displaced along `v`. Now the renderer has genuine motion segments to differentiate, and `dPdtime` populates. The topology problem evaporates, because you build both samples from the *same* current points, so the count is identical across the shutter by construction.
+
+```lua
+-- Synthesize motion-blur samples on P from velocity, so dPdtime can populate.
+-- Runs on the geometry location. P/v/N stay in their native groups -- nothing moves to arbitrary.
+local Pattr = Interface.GetAttr("geometry.point.P")
+local Vattr = Interface.GetAttr("geometry.point.v")   -- velocity, units/sec
+
+if Pattr ~= nil and Vattr ~= nil then
+    local fps = 24.0
+    local t0, t1 = -0.25, 0.25          -- shutter open/close in frames -- MUST match your render shutter
+
+    local P = Pattr:getNearestSample(0.0)
+    local V = Vattr:getNearestSample(0.0)
+
+    local s0, s1 = {}, {}
+    for i = 1, #P do
+        s0[i] = P[i] + V[i] * (t0 / fps)   -- position at shutter open
+        s1[i] = P[i] + V[i] * (t1 / fps)   -- position at shutter close
+    end
+
+    Interface.SetAttr("geometry.point.P", FloatAttribute({ [t0] = s0, [t1] = s1 }, 3))
+    Interface.DeleteAttr("geometry.point.v")   -- kill the velocity-blur trigger (see below)
+end
+```
+
+The pieces that make it real:
+
+- **`P` stays in `geometry.point.P`.** A tempting wrong turn (one well-meaning AI told me to move `P`/`v`/`N` into `geometry.arbitrary`) — **don't.** `geometry.arbitrary` is for *shader-readable primvars* (the `userColor`/`PxrTee` AOV path above). `dPdtime` is the renderer differentiating *native* geometry. Move `P` out of `geometry.point.P` and your mesh has no points.
+- **Disable velocity blur.** It's one-or-the-other: single P-sample + `v` = velocity blur; multi-sample P = geometry blur. The `DeleteAttr("geometry.point.v")` removes the velocity trigger so the renderer can't double up. (If you also want the velocity AOV, promote `geometry.arbitrary.vel` *before* this script deletes `v`.) Also flip the object's motion-blur mode to geometry/deformation if it has an explicit toggle.
+- **Shutter times must match the render.** `t0/t1` are the shutter open/close in frames. Mismatch and the renderer samples where there's no data.
+- **Two samples = linear motion.** `dPdtime` comes out as **`v/fps`** (per-frame velocity), independent of the shutter span — the math cancels `(t1−t0)`. Add more sample times only for curved sub-frame motion.
+
+### "Wait — does synthesizing mean we lost the correct upstream values?"
+No. `v` from Houdini **is** the authoritative velocity, and `dPdtime = v/fps` is correct as long as `v` is. The synthesis isn't a band-aid over bad data — it's translating the *velocity-blur encoding* into the *motion-sample encoding* `dPdtime` needs, using the **exact same linear model** velocity blur already used. You're no less accurate than the blur you were already rendering.
+
+The only thing a linear model can't capture is sub-frame **curvature** (acceleration/turbulence) — but velocity blur couldn't either; only true sub-frame geometry samples can. So the real question isn't "is synthesis cheating," it's **"is `v` trustworthy?"** Validate it directly:
+
+```
+v / fps  ≈  P(next frame) − P(this frame)
+```
+
+If per-frame velocity matches the actual position delta, your upstream is solid. And if this is a **constant-topology mesh** (it was — `N` came in `vertex` scope), the *more accurate* upstream route is to have Houdini export real **deformation motion blur** (genuine sub-frame samples, curves and all) — then `dPdtime` works natively, no synthesis. Reserve synthesis for the changing-topology cases where deformation samples are impossible.
+
+**Verify:** probe the rendered `dPdtime` — it should read ≈ `velocity / fps`. For `(-175, -189, -14.6)` at 24fps, that's ≈ `(-7.3, -7.9, -0.6)`.
+
+---
+
 ## The short version
 
 - `dPdtime` is black on velocity-blur particles **on purpose** — there are no motion samples to differentiate. Output the `v` primvar (or, on a locked cam, just use `dPcameradtime`).
@@ -180,8 +232,9 @@ And one perceptual trap worth its own line: **probe the numbers, don't trust the
 - Many primvars → **`PxrTee`** (one `aovName` each), all results **combined into a `userColor` sink** so they stay alive.
 - **`×1/FPS`** for units; **`color`** type for raw values, **`vector`** for transformed.
 - When it's black, **bisect**: constant-into-userColor, fake-name-with-default, probe the actual numbers.
+- Need `dPdtime` *itself* on particles? **Synthesize 2-sample `P` from `P + v`** at the shutter times, delete `v` to disable velocity blur, and it populates as `v/fps`. `P` stays in `geometry.point.P` — never move it to `arbitrary`. (Coda.)
 
-Six tripwires, every one of them silent. Now they're written down.
+Six tripwires and one resurrection, every failure silent. Now they're written down.
 
 ---
 
