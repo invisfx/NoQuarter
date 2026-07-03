@@ -57,6 +57,8 @@ int(getresdict(str(getParam('RenderSettings.args.renderSettings.resolution.value
 | **`visible`** (int, location root) | Alembic visibility property: `1` visible, `0` hidden (all rays), `-1` inherit. Animatable, inherited from parents. Distinct from RfK ray-visibility flags and from `viewer.default.drawOptions.hide` (viewport-only). |
 | Multi-sample (motion) attribute | `FloatAttribute({ [t0] = arr0, [t1] = arr1 }, 3)` — table keyed by sample time. |
 | Read global attr from any location (OpScript) | `Interface.GetGlobalAttr("renderSettings.resolution", "/root")` |
+| **Resolution table — two different APIs** | Python: `from Katana import ResolutionTable` → `ResolutionTable.GetResolutionTable().getResolution(name)`. **OpScript/Lua:** `ResolutionTable.GetResolution(name)` directly (no `GetResolutionTable()` — it's nil in Lua). Entry: `getXRes()`/`getYRes()`. |
+| RenderSettings params are GenericAssign-style | `getParam('Node.args.renderSettings.X.value')` returns that node's **local/default** value unless X is *enabled there* — the resolved scene value can come from a different node. To read what actually won, use an OpScript on the resolved `/root` attrs. |
 | Current cook time (OpScript) | `Interface.GetCurrentTime()`; OpScripts re-cook per frame (and per shutter sample under MB). |
 
 ---
