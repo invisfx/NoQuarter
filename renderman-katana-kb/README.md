@@ -67,6 +67,7 @@ Compiled June 2026 from official Pixar (`rmanwiki.pixar.com` / `renderman.pixar.
 | # | File | What's inside |
 |---|---|---|
 | 15 | [`15-primvar-aovs-katana.md`](15-primvar-aovs-katana.md) | Getting Houdini FX-cache primvars (velocity, Cd, id, age, world position) out as AOVs in RfK. Why `dPdtime` fails on velocity-blur particles; promoting `geometry.point.v` → `geometry.arbitrary.v` (the **`vector3` vs `vector` inputType** trap); single-AOV via `userColor`/U4 (incl. the **mandatory U4 lobe registration** + `CU4L`/`noclamp` LPE); multi-AOV via `PxrTee` (+ the keep-alive gotcha); units (`1/FPS`) & coordinate-space (`color` vs `vector`); a bisection-test troubleshooting table. |
+| 16 | [`16-katana-quick-reference.md`](16-katana-quick-reference.md) | Session-verified quick reference: parameter-expression facts (`getParam` returns a reference, `getresdict()` for resolution, `__import__` in expressions), CEL syntax + performance rules, primvar/attribute conventions (reserved names, `inputType`, `visible`), motion blur (`VelocityApply`, filters for data AOVs), AOV/channel filters (`zmin`, RIS-only), OSL-as-node workflow, Look File lights/constraints activator, AttributeSet-vs-resolve ordering. |
 
 ---
 
