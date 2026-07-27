@@ -88,6 +88,18 @@ int(getresdict(str(getParam('RenderSettings.args.renderSettings.resolution.value
 | **No `PxrOSL` node** | Compiled OSL **is** the node: `oslc` → `.oso` on `RMAN_SHADERPATH` → appears in NMC Tab menu by shader name; params auto-read from the `.oso` (no Args file). Restart/rescan to see new shaders. |
 | Lights can't take pattern inputs | GafferThree lights have no network-material inputs — no wiring `raytype()` gains into `lightColor`. Per-light indirect control = LPE AOVs + comp, or surface-side `raytype("diffuse")` boost (per-material, non-physical). |
 
+### LPE gotchas (all fail silently to black)
+
+| Trap | Detail |
+|---|---|
+| **`0` vs `O`** | The emissive-object token is letter **O**. A zero parses fine and matches nothing. |
+| **Mesh lights are `L`, not `O`** | `PxrMeshLight` terminates as a light (`<L.>`/`<L.'group'>`); PxrSurface glow = `O`. `...O` channels are black for mesh lights. |
+| **Opacity/presence "glass" ≠ transmission** | Opacity continuation is not a scattering event — `<TS>` never matches. Only refractive lobes (PxrSurface glass, Lama dielectric) create `T` events. With opacity glass, emission-behind-glass lands in plain `lpe:CO`. |
+| **No arithmetic in LPEs** | Grammar = events/operators/modifiers only. No gain/multiply — LPEs select paths, never scale them. Brightening happens at recombine, sample/display filter, or shader. |
+| **Indirect per light** | `lpe:C[DS][DS]+<L.'g'>` (all indirect); `lpe:C[DS][DS][DS]+<L.'g'>` (2nd+ bounces); exact-Nth = N+1 explicit `[DS]` tokens, no `+`. Emission through glass: `lpe:C<TS>+O` (cap: `<TS><TS>` = one pane). |
+| **`lpegroup`** | Tag geo via `prmanStatements.attributes.identifier.lpegroup`; reference as `<.D'foo'>`, any-event `<..'foo'>`, negate `[^'foo']`, multi `['foo''bar']`. **PxrPathTracer only.** Grouping the glass (`<TS'heroGlass'>`) is the doc-verified way to isolate per-object transmission. |
+| **Debug ladder** | `lpe:C.*` (machinery) → `lpe:CO` (emitter kind) → `lpe:CS[<L.>O]` (any specular link) → target expression. First black rung names the failure. |
+
 ---
 
 ## Look Files
