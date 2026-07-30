@@ -52,6 +52,7 @@ int(getresdict(str(getParam('RenderSettings.args.renderSettings.resolution.value
 |---|---|
 | Primvars for shaders live in **`geometry.arbitrary.*`** | `geometry.point.*` is native geometry (only `P` special-cased). Promote with `value`/`scope`/`inputType` triplet. See [15](15-primvar-aovs-katana.md). |
 | **`inputType` convention varies** | USD-imported scenes use `vector3`/`color3`/`point3`; match a sibling primvar, don't assume `vector`. |
+| **Three type-name schemes in play** | Katana `inputType`: `vector3`/`color3`/`point3` (USD-style). `PxrVariable.type`: `float`/`float2`/`float3`. `PxrPrimvar.Type` (RfK 26 UI): also USD-style (`vector3`…). Semantics still matter regardless of spelling: `color*` = raw pass-through (data AOVs), `vector*` = rotates/scales but **no translation**, `point*` = full transform. A position primvar (Pref) read as `vector3` loses translation — fine only on identity-xform geo. |
 | **`v` is a reserved name** | RenderMan built-in parametric V — a primvar named `v` reads as scalar grayscale. Rename (`vel`). Also reserved: `u, s, t, P, N, Ng, Cs, Os, du, dv, time`. |
 | Scope mapping | Houdini point→`point`, vertex→`vertex`, primitive→`face`, detail→`primitive`. Per-particle data is always `point`. |
 | **`visible`** (int, location root) | Alembic visibility property: `1` visible, `0` hidden (all rays), `-1` inherit. Animatable, inherited from parents. Distinct from RfK ray-visibility flags and from `viewer.default.drawOptions.hide` (viewport-only). |
