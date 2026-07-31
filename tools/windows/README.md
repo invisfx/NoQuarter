@@ -3,7 +3,24 @@
 `txmake-sendto.cmd` converts image files to RenderMan `.tx` textures with
 Pixar's `txmake`, writing each `.tx` into the same folder as its source image.
 
-## Install
+## Install (scripted)
+
+Copy both files somewhere stable, e.g. `C:\Scripts\`, then run:
+
+```
+powershell -ExecutionPolicy Bypass -File C:\Scripts\install-shortcuts.ps1
+```
+
+That creates two shortcuts to `txmake-sendto.cmd`:
+
+- **Desktop** — a drag-and-drop target. Drop one or many images on it.
+- **Send to** — the Explorer right-click entry.
+
+Useful switches: `-Name "Make TX"` to rename the entry, `-SkipDesktop` /
+`-SkipSendTo` to create only one, `-IconLocation "C:\icons\tx.ico"` to set the
+icon, and `-Uninstall` to remove the shortcuts again.
+
+## Install (manual)
 
 1. Copy `txmake-sendto.cmd` somewhere stable, e.g. `C:\Scripts\`.
 2. Press <kbd>Win</kbd>+<kbd>R</kbd>, type `shell:sendto`, press Enter. That
@@ -16,11 +33,17 @@ Pixar's `txmake`, writing each `.tx` into the same folder as its source image.
 Put the *shortcut* in SendTo rather than the script itself — that keeps the
 script editable in one place and lets you rename the menu entry freely.
 
+For a desktop drop target, right-drag the same `.cmd` onto the Desktop and
+choose **Create shortcuts here**.
+
 ## Use
 
-Select one or more images in Explorer → right-click → **Send to** →
-**Convert to .tx**. On Windows 11 that's under **Show more options**, or hold
-<kbd>Shift</kbd> while right-clicking.
+Drag images onto the Desktop shortcut, or select them in Explorer →
+right-click → **Send to** → **Convert to .tx**. On Windows 11 the Send to menu
+is under **Show more options**, or hold <kbd>Shift</kbd> while right-clicking.
+
+Dropping images from several different folders at once is fine — each `.tx` is
+written beside its own source.
 
 It also runs fine from a command prompt:
 
@@ -71,4 +94,7 @@ version.
   jobs, run the script from a command prompt with a `for /r` loop instead.
 - **Dropped folders are skipped**, not recursed. The script reports them rather
   than failing.
+- **Drag-and-drop onto an elevated target does not work.** If you ever wrap this
+  in a "run as administrator" shortcut, Windows will silently refuse the drop.
+  Nothing here needs admin rights, so leave it unelevated.
 - Failures leave the console window open so you can read `txmake`'s error.
