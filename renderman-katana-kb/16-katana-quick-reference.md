@@ -100,6 +100,7 @@ int(getresdict(str(getParam('RenderSettings.args.renderSettings.resolution.value
 | **Indirect per light** | `lpe:C[DS][DS]+<L.'g'>` (all indirect); `lpe:C[DS][DS][DS]+<L.'g'>` (2nd+ bounces); exact-Nth = N+1 explicit `[DS]` tokens, no `+`. Emission through glass: `lpe:C<TS>+O` (cap: `<TS><TS>` = one pane). |
 | **`lpegroup`** | Tag geo via `prmanStatements.attributes.identifier.lpegroup`; reference as `<.D'foo'>`, any-event `<..'foo'>`, negate `[^'foo']`, multi `['foo''bar']`. **PxrPathTracer only.** Grouping the glass (`<TS'heroGlass'>`) is the doc-verified way to isolate per-object transmission. |
 | **Debug ladder** | `lpe:C.*` (machinery) → `lpe:CO` (emitter kind) → `lpe:CS[<L.>O]` (any specular link) → target expression. First black rung names the failure. |
+| **No volume token — volumes are `D`** | RenderMan LPEs have only two scattering classes (D, S) + user events; there is no `V` (that's Karma/others). Volume scattering registers as **`D`**, so `lpe:C[DS]*[<L.>O]` is the complete beauty *including* volumes — and `lpe:C[DS]*<L.'key'>` gives per-light volume contribution. |
 
 ---
 
