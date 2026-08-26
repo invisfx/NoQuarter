@@ -67,6 +67,17 @@ int(getresdict(str(getParam('RenderSettings.args.renderSettings.resolution.value
 
 ---
 
+## Adaptive sampling (RIS)
+
+| Fact | Detail |
+|---|---|
+| **What PixelVariance actually tests** | The **change in the accumulated pixel value** as samples are added ("has the running estimate stopped moving?") — NOT the spread between individual samples. Docs: *"as each sample is added… the renderer looks to see how much the sample changes the pixel; if enough samples are added without changing the pixel much, it stops."* Selectable error metrics also exist (`contrast`, `variance`, `relativevariance`, `halfbuffer` = split-buffer comparison). |
+| `minsamples` | Floor before termination is permitted; **default = √maxsamples** (docs-confirmed). Too low → fluke plateaus pass the stillness test → blotches, missed small brights, animation flicker (worst symptom; invisible on stills). Too high → flat tax on easy pixels, no quality gain. Raise above √max for heavy DOF/MB/tiny-light shots; near-zero acceptable for IPR only. |
+| Tuning method | Step `minsamples` up until the image stops changing — if changing it changes the image, the lower value was terminating on unreliable evidence. Verify spend with the **sample-count AOV** (probe, don't eyeball). |
+| Per-object light samples | **No per-receiver override exists** in RIS. Levers: per-LIGHT `fixedSampleCount`/importance, light linking, or adaptive sampling naturally concentrating on noisy pixels. |
+
+---
+
 ## Motion blur (RfK)
 
 | Fact | Detail |
