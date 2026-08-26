@@ -21,10 +21,12 @@ int(getresdict(str(getParam('RenderSettings.args.renderSettings.resolution.value
 int(getresdict(str(getParam('RenderSettings.args.renderSettings.resolution.value')))['yres'] * 0.05)  # i1/i3
 ```
 
+**Reading graph state variables: the function is `getVar("name")`** (docs-verified; `getGraphStateVariable` does NOT exist). Resolves the *local* graph state where available (VariableSet overrides respected), falling back to global. `matchGraphStateVariable()` also exists for pattern matching.
+
 **Switch-by-variable with wildcard:**
 ```python
-1 if (getGraphStateVariable("shot") or "").startswith("102") else 0
-1 if __import__('fnmatch').fnmatch(getGraphStateVariable("shot") or "", "102*") else 0
+1 if (getVar("shot") or "").startswith("102") else 0
+1 if __import__('fnmatch').fnmatch(getVar("shot") or "", "102*") else 0
 ```
 `==` is exact match — `"102*"` in an equality test matches nothing. `VariableSwitch` node = declarative wildcard patterns per port, no code.
 
