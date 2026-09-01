@@ -39,7 +39,8 @@ int(getresdict(str(getParam('RenderSettings.args.renderSettings.resolution.value
 | Type test | `//*{@type == "polymesh"}` (`@type` ≡ `attr("type")`) |
 | **OR inside predicate** | `//*{@type == "polymesh" or @type == "subdmesh"}` |
 | Set ops | `+` union (or adjacency), `-` difference, `^` intersection |
-| Only `*` and `//` | No `?`, no numeric ranges, no regex. |
+| Path tokens: only `*` and `//` | No `?`/classes/regex **in path names**. |
+| **✅ Predicates have a match operator: `~=`** | Production-verified: `{@name ~= "[gG]lass"}` works — pattern matching (incl. character classes) against location names in predicate position. This is how to do case/variant name matching; path tokens can't. Same perf class as other attribute predicates — anchor the scope. (Glob-vs-regex semantics of `~=`: characterize with `.*` vs `*` tests.) |
 | **Perf rule 1** | CEL fast-path compares the **last token** — keep it specific. Wildcard mid-path (`geo/*/render`) beats trailing wildcard (`geo/car*`). |
 | **Perf rule 2** | Recursion is the cost: `//car*` may test every location. Anchor to a known parent. Attribute predicates `{...}` are most expensive — scope them tight. |
 | Explicit paths beat wildcards up to ~100 paths | Above thousands, wildcard rules win. Collections of explicit paths stay fast. |
