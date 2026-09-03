@@ -46,6 +46,7 @@ int(getresdict(str(getParam('RenderSettings.args.renderSettings.resolution.value
 | Explicit paths beat wildcards up to ~100 paths | Above thousands, wildcard rules win. Collections of explicit paths stay fast. |
 | **No cross-location lookup** | A CEL test sees only the tested location's own attrs. `/root{attr("renderSettings.resolution") == "HD_1080"}` works *at /root only*. To condition other locations on resolution: OpScript + `Interface.GetGlobalAttr("renderSettings.resolution", "/root")`, or drive the CEL string with a parameter expression. |
 | CEL selects, never converts | Type changes are `Interface.SetAttr("type", StringAttribute("polymesh"))` in an OpScript (guard with `Interface.GetType()`). |
+| **Subd→poly swap renders faceted? Use `polygon.smoothnormals`** | Subd caches often ship without `N` (the limit surface provides it), so after a type swap prman shades per-face. Fix without authoring N: `prmanStatements.attributes.polygon.smoothnormals = 1` (PrmanObjectStatements → Polygon → Smooth Normals → Yes) — docs: "if your normals need smoothing to approximate a subdivision surface." Sibling knob: `polygon.smoothdisplacement`. Shading only — silhouette stays the unsubdivided cage. |
 
 ---
 
