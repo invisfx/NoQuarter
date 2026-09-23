@@ -34,6 +34,9 @@ from Katana import NodegraphAPI, RenderManager, FnGeolib, Nodes3DAPI
 NODE_NAME = "L020_INT_bg_data"     # render node (= pass folder name)
 FOLDERS   = ["crypto_material", "crypto_object", "matteID", "primary", "tech", "stats"]
 FRAMES    = "1049-1049"            # '1238-1325', '1240', or '1238-1240,1250,1300-1302'
+MODE      = "up"                   # "up"  = next free vXXX, sets user.version
+                                   # "add" = keep user.version as-is, write into the
+                                   #         existing version (overwrite/fill frames)
 # ------------------------------------------
 
 def getRenderRoot(node):
@@ -54,26 +57,29 @@ def getRenderRoot(node):
             return path[:m.start()]            # everything before \vXXX\
     return None
 
-def makeVersionedFolders(renderRoot, passName, node):
-    versions = [int(m.group(1)) for m in
-                (re.match(r"v(\d+)$", d) for d in os.listdir(renderRoot))
-                if m] if os.path.isdir(renderRoot) else []
-    version = "v%03d" % (max(versions) + 1 if versions else 1)
-
-    # point the render node at the new version
+def makeVersionedFolders(renderRoot, passName, node, mode):
     vparam = node.getParameter("user.version")
     if vparam is None:
         print("no user.version parameter on", node.getName())
         return None
-    old = vparam.getValue(0)
-    newVal = version if str(old).startswith("v") else version[1:]   # match existing format
-    vparam.setValue(newVal, 0)
-    print("user.version: %s -> %s" % (old, newVal))
+    old = str(vparam.getValue(0))
+
+    if mode == "up":
+        versions = [int(m.group(1)) for m in
+                    (re.match(r"v(\d+)$", d) for d in os.listdir(renderRoot))
+                    if m] if os.path.isdir(renderRoot) else []
+        version = "v%03d" % (max(versions) + 1 if versions else 1)
+        newVal = version if old.startswith("v") else version[1:]   # match existing format
+        vparam.setValue(newVal, 0)
+        print("user.version: %s -> %s" % (old, newVal))
+    else:                                   # "add": render into the current version
+        version = old if old.startswith("v") else "v" + old
+        print("using existing version:", version)
 
     base = os.path.join(renderRoot, version, passName)
     for name in FOLDERS:
         os.makedirs(os.path.join(base, name), exist_ok=True)
-        print("created:", os.path.join(base, name))
+        print("ensured:", os.path.join(base, name))
     return version
 
 def renderRange(node, frameSpec):
@@ -105,5 +111,5 @@ else:
         print("could not find a vXXX version folder in the node's output paths")
     else:
         print("render root:", renderRoot)
-        if makeVersionedFolders(renderRoot, NODE_NAME, node) is not None:
+        if makeVersionedFolders(renderRoot, NODE_NAME, node, MODE) is not None:
             renderRange(node, FRAMES)
