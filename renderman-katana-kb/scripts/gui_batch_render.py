@@ -68,11 +68,12 @@ def makeVersionedFolders(renderRoot, passName, node, mode):
         versions = [int(m.group(1)) for m in
                     (re.match(r"v(\d+)$", d) for d in os.listdir(renderRoot))
                     if m] if os.path.isdir(renderRoot) else []
-        version = "v%03d" % (max(versions) + 1 if versions else 1)
-        vparam.setValue(version, 0)                     # always vXXX format, e.g. v001
-        print("user.version: %s -> %s" % (old, version))
-    else:                                   # "add": render into the current version
-        version = old if old.startswith("v") else "v" + old
+        num = (max(versions) + 1) if versions else 1
+        vparam.setValue(num, 0)                 # user.version is a NUMBER parameter
+        version = "v%03d" % num                 # folder name the scene builds from it
+        print("user.version: %s -> %d  (%s)" % (old, num, version))
+    else:                                       # "add": render into the current version
+        version = "v%03d" % int(float(old))
         print("using existing version:", version)
 
     base = os.path.join(renderRoot, version, passName)
