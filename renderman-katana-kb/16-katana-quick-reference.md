@@ -132,6 +132,17 @@ int(getresdict(str(getParam('RenderSettings.args.renderSettings.resolution.value
 
 ---
 
+## Rendering from the GUI (no shell)
+
+| Fact | Detail |
+|---|---|
+| **Frame-range disk renders from the Python tab** | `RenderManager.StartRender("diskRender", node=n, settings=s)` with `s = RenderManager.RenderingSettings()`. **`StartRender` is async by default** — a bare loop supersedes itself and renders only the last frame (or piles up renderboot.exe processes that crash `0xC0000005` fighting over the session temp dir). Fix: `s.asynch = False; s.allowWaitingForRenderCompletion = True` → each call blocks (UI freezes per frame). Full script incl. auto version-up + output-folder creation: [`scripts/gui_batch_render.py`](scripts/gui_batch_render.py). |
+| RenderingSettings fields (6.5, verified via `dir()`) | `asynch`, `allowWaitingForRenderCompletion`, `frame`, `frameRanges`, `renderCompletionCB` (non-freezing chaining), `interactiveOutputs`, `overscanPadding`, `renderOutputFile`. `StartRender` **returns a list of dicts describing created outputs** — print it to confirm frames hit the filer, not `C:/tmp`. `TriggerManualRender()` is NOT a scriptable disk render (repeats last render, Manual-mode interactive). |
+| **Writers don't mkdir** | Neither UI disk render nor scripted renders create missing output folders (cryptomatte/stats sidecars fail silently). Pre-create every output dir; resolved paths for ALL writers (incl. crypto sample filters + stats) can be scraped from the cooked `/root`: `re.findall(r'value="([^"]*[/\\][^"]*\.(?:exr|xml))"', attrs.getXML())` — skip entries containing `<` (`<aov>` templates). |
+| renderboot.exe `0xC0000005` | renderboot = the per-render host process Katana spawns; `0xC0000005` = Windows access violation (segfault), NOT out-of-memory. Garbled/interleaved log lines = multiple render processes writing one log (concurrent-render pile-up). For a lone crash: Event Viewer → Windows Logs → Application names the **faulting module** (prman/RfK = content or version mismatch; GPU DLL = driver/XPU; studio DLL = pipeline). |
+
+---
+
 ## Environment / meta
 
 - **This sandbox cannot reach `learn.foundry.com` or Pixar's rmanwiki** (proxy policy denies CONNECT; only search snippets available). To make doc lookups exact: **copy the offline Katana docs into the repo** (e.g. `docs/katana/`) — then they're grep-able directly.
