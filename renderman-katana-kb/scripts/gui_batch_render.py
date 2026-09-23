@@ -69,9 +69,8 @@ def makeVersionedFolders(renderRoot, passName, node, mode):
                     (re.match(r"v(\d+)$", d) for d in os.listdir(renderRoot))
                     if m] if os.path.isdir(renderRoot) else []
         version = "v%03d" % (max(versions) + 1 if versions else 1)
-        newVal = version if old.startswith("v") else version[1:]   # match existing format
-        vparam.setValue(newVal, 0)
-        print("user.version: %s -> %s" % (old, newVal))
+        vparam.setValue(version, 0)                     # always vXXX format, e.g. v001
+        print("user.version: %s -> %s" % (old, version))
     else:                                   # "add": render into the current version
         version = old if old.startswith("v") else "v" + old
         print("using existing version:", version)
