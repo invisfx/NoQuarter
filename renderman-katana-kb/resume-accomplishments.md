@@ -36,6 +36,17 @@
 
 - Authored a 16-document **RenderMan/Katana knowledge base** (core, optimization, shading, lighting, AOVs/LPEs, Katana customization, USD, color, workflows, lead templates, tooling, quick reference) with session-verified gotchas, kept under version control.
 
+## Show technical leadership (from the running to-do list — refine with title/team size/numbers)
+
+- Owned and released the show's **lighting template and livegroups** (lighting template, prman init, global show module, global post overrides), rolling optimization updates out to the whole lighting team.
+- Ran the **farm crash-investigation program**: designed the staged bisection protocol (empty → geo → textures → lights, with/without AOVs), performed Tractor job forensics across artists' failing jobs, triaged "errorless" failures, and escalated to the renderer vendor with reproducible cases.
+- **Audited external optimization proposals** with per-op profiling data (Geolib op timings) and controlled tests; accepted or rejected changes on evidence (e.g. displacement-bound test across 30 assets: change smaller than noise).
+- Communicated **show-wide pipeline changes** (motion-blur shutter convention: centered → forward) with clear re-render implications for every layer.
+- Designed **controlled wedge tests** (min-sample ladders, glass/volume sample budgets, time-of-day variants) run on dedicated blades for like-for-like benchmarking.
+- Fixed and standardized **AOV/denoise configuration** issues: interactive-render noise (Ci + LPE outputs), emissive AOV restoration, channel-list consistency, velocity-apply guard for caches without velocity.
+- Daily **technical support for lighting artists** across dozens of shots: constraint targets, Pref/FX attributes, mesh-connectivity cryptomattes for window IDs, overscan tagging, light-linking vs. trace-set membership clashes, volume-pass optimization checklists.
+- Cross-department coordination with pipeline/TD, lookdev, FX, comp, and production on render standards (layer conventions for glass passes, volume prunes in globals, test-environment folder structure).
+
 ## Ideas to quantify before using
 - Number of shots/passes affected by the motion-vector and refracted-matte work.
 - Hours saved per week by the GUI batch render + frame checker loop.
