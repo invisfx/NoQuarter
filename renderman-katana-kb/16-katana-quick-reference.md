@@ -143,6 +143,20 @@ int(getresdict(str(getParam('RenderSettings.args.renderSettings.resolution.value
 
 ---
 
+## Per-object ID mattes without lookdev edits (PRODUCTION-VERIFIED)
+
+| Fact | Detail |
+|---|---|
+| **Spatially-ordered ID color for facesets** | Cryptomatte colors are hashes (random). For a UV-style ID (R = left→right, G = bottom→top) compute each faceset's vertex centroid from the **parent mesh's own `geometry.point.P` / `poly.startIndex` / `poly.vertexList`**, normalize against the parent's `bound` — all mesh-local, so no matrices and immune to the asset's xform. One flat color per faceset by construction. Script: [`scripts/lightID_faceset.lua`](scripts/lightID_faceset.lua). Needs all facesets on ONE mesh. |
+| **Splice a resolved shader at render time** | Add `material.nodes.<n>` (`name/srcName/type/target/parameters.*`) and set `material.nodes.<bxdf>.connections.userColor = "resultRGB@<n>"` — bxdf name from `material.terminals.prmanBxdf`. Must run **after an explicit `MaterialResolve`** (pre-resolve a location only has `materialAssign`; the op silently no-ops). Script: [`scripts/lightID_splice.lua`](scripts/lightID_splice.lua). |
+| **Facesets own their materials** | Patching the mesh's material does NOT reach facesets that carry their own `materialAssign` (usually why facesets exist). CEL the splice on `mesh + mesh/piece_*`; the op is idempotent (skips if `userColor` already wired). |
+| `PxrAttribute` vs `PxrPrimvar` | User attribute (`prmanStatements.attributes.user.X`, **typed** via GroupBuilder) → `PxrAttribute(varname=X, type=color)`. Primvar (`geometry.arbitrary.X` + scope/inputType) → `PxrPrimvar`. Per-location data on facesets: user attribute is the proven path. |
+| **`max` pixel filter on ID AOVs** | Keeps IDs pure at silhouettes (no antialiased blends with background). Caveat: per-channel max can mix R of one object with G of another where two *different* IDs overlap in a pixel — key with tolerance in comp. |
+| OpScript transform API (Lua) | Global is **`XFormUtils`** (plural): `Imath.M44d(XFormUtils.CalcTransformMatrixAtTime(Interface.GetGlobalXFormGroup(loc), t):getNearestSample(0))`; points transform as `Imath.V3d({x,y,z}) * M44d` (row-vector); position = `m:translation()`. `multVecMatrix` is not in the Lua binding; `XFormUtil` (singular) is "not declared". |
+| Lights-as-AOV tools, by what they can output | Built-in channels (`P N Nn Ng z __Pref __st` …) need nothing attached; LPEs = light transport (`lpe:C[DS]+O` = all emissive indirect, `lpe:unoccluded;C<RD><L.'g'>` ÷ `lpe:C<RD><L.'g'>` = per-light shadow matte); **PxrAOVLight** = a *light* (not a filter) writing a visibility mask to `aovName` — it cannot carry normals or pattern outputs; anything computed by pattern nodes (dirt, facing) is shader-side (`userColor`/`PxrTee`) or comp (facing = camera-space `N.z`). No distance/occlusion token exists in LPEs. |
+
+---
+
 ## Environment / meta
 
 - **This sandbox cannot reach `learn.foundry.com` or Pixar's rmanwiki** (proxy policy denies CONNECT; only search snippets available). To make doc lookups exact: **copy the offline Katana docs into the repo** (e.g. `docs/katana/`) — then they're grep-able directly.
